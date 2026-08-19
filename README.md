@@ -33,3 +33,9 @@ The entire application environment, including the database infrastructure, is co
     `docker compose up --build -d`
 3.  **Access the API:** Navigate to `http://localhost:8080/scalar/v1` in your browser to view the interactive endpoints.
 4.  **Local Debugging:** You can also run the API directly via Visual Studio/VS Code (which will bind to a local port like 7228) while keeping the database containers running in the background.
+
+---
+
+##  Project URL
+
+** https://roadmap.sh/projects/movie-reservation-system
