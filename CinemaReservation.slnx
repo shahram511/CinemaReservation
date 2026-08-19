@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="CinemaReservation.API/CinemaReservation.API.csproj" />
+  <Project Path="CinemaReservation.Core/CinemaReservation.Core.csproj" />
+  <Project Path="CinemaReservation.Infrastructure/CinemaReservation.Infrastructure.csproj" />
+</Solution>
