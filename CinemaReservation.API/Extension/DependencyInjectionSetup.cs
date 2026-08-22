@@ -54,6 +54,8 @@ namespace CinemaReservation.API.Extension
             services.AddScoped<IMovieCommentRepository, MovieCommentRepository>();
             services.AddScoped<IMovieCommentService, MovieCommentService>();
             services.AddScoped<IValidator<CreateCommentDto>, CreateCommentDtoValidator>();
+            services.AddScoped<IAnalyticService, AnalyticService>();
+            services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 
             // 5. JWT Authentication
             var secretKey = configuration["JwtSettings:Secret"] ?? throw new Exception("JWT Key is missing!");

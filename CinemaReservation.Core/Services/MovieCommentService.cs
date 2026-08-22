@@ -1,4 +1,5 @@
 ﻿using CinemaReservation.Core.DTOs;
+using CinemaReservation.Core.DTOs.Anlaytics;
 using CinemaReservation.Core.Entities;
 using CinemaReservation.Core.Interfaces;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -66,6 +67,15 @@ namespace CinemaReservation.Core.Services
                 CreatedAt = comment.CreatedAt,
 
             };
+        }
+
+        public async Task<MovieEngagmentDto> GetCommentInfoByMovieIdAsync(Guid movieId)
+        {
+            if (movieId == Guid.Empty)
+                throw new ArgumentException("A valid Movie ID must be provided to fetch comments.", nameof(movieId));
+
+            var commentCount = await _repository.GetCommentsInfoByMovieIdRepoAsync(movieId);
+            return commentCount;
         }
     }
 }

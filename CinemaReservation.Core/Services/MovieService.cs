@@ -130,6 +130,7 @@ namespace CinemaReservation.Core.Services
             {
                 Id = s.Id,
                 MovieId = s.MovieId,
+                TicketPrice = s.TicketPrice,
                 StartTime = s.StartTime
             }).ToList();
         }

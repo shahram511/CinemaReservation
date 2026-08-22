@@ -16,6 +16,8 @@ namespace CinemaReservation.Core.Enums
         // Concurrency Token for EF Core
         public byte[] Version { get; set; } = Array.Empty<byte>();
 
+        //public Core.Enums.Enums.ReservationStatus Status { get; set; } = Core.Enums.Enums.ReservationStatus.Pending;
+
         // Navigation Properties
         public Reservation? Reservation { get; set; }
         public Seat? Seat { get; set; }

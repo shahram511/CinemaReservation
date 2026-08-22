@@ -8,6 +8,7 @@ namespace CinemaReservation.Core.DTOs
     {
         public Guid Id { get; set; }
         public Guid MovieId { get; set; }
+        public decimal TicketPrice { get; set; }
         public DateTime StartTime { get; set; }
     }
 }

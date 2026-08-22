@@ -1,4 +1,6 @@
 ﻿using CinemaReservation.Core.Entities;
+using CinemaReservation.Core.Enums;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -23,3 +25,4 @@ namespace CinemaReservation.Core.Enums
 
     }
 }
+

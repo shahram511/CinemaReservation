@@ -8,7 +8,8 @@ namespace CinemaReservation.Core.Entities
     {
         public Guid Id { get; set; }
         public Guid MovieId { get; set; }
-        public DateTime StartTime { get; set; }        
+        public DateTime StartTime { get; set; }
+        public decimal TicketPrice { get; set; } = 15.00m;
 
         // Navigation Properties
         public Movie? Movie { get; set; }

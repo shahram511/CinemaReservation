@@ -22,8 +22,7 @@ namespace CinemaReservation.API.Controllers
             _createCommentValidator = createCommentValidator;
         }
 
-        [HttpGet]
-        
+        [HttpGet]        
         public async Task<IActionResult> GetComments([FromRoute]Guid movieId)
         {
             var comments  = await _commentService.GetCommentsByMovieIdAsync(movieId);
@@ -53,6 +52,14 @@ namespace CinemaReservation.API.Controllers
             var newComment = await _commentService.AddCommentAsync(movieId, userId, userName, request);
 
             return CreatedAtAction(nameof(GetComments), new { movieId }, newComment);
+        }
+
+        [HttpGet("info")]        
+        public async Task<IActionResult> GetNumberCommentsAverageRateAsync([FromRoute] Guid movieId)
+        {
+            var result = await _commentService.GetCommentInfoByMovieIdAsync(movieId);
+
+            return Ok(result);
         }
     }
 }
