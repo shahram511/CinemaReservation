@@ -3,6 +3,11 @@
     <File Path=".gitignore" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="CenemaReservation.E2ETests/CenemaReservation.E2ETests.csproj" Id="34c07cf4-4d59-416a-8f9e-f7d6d167116c" />
+    <Project Path="CinemaReservation.API.Tests/CinemaReservation.API.Tests.csproj" Id="02dc0232-e100-4fe0-aa97-7bccecc2129c" />
+    <Project Path="CinemaReservation.Core.Tests/CinemaReservation.Core.Tests.csproj" Id="9a0fc892-3878-48fd-9b37-a850845ccb10" />
+  </Folder>
   <Project Path="CinemaReservation.API/CinemaReservation.API.csproj" />
   <Project Path="CinemaReservation.Core/CinemaReservation.Core.csproj" />
   <Project Path="CinemaReservation.Infrastructure/CinemaReservation.Infrastructure.csproj" />

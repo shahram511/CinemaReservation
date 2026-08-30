@@ -187,11 +187,14 @@ namespace CinemaReservation.Infrastructure.Migrations
                     b.Property<Guid>("ShowtimeId")
                         .HasColumnType("uuid");
 
-                    b.Property<byte[]>("Version")
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("Version")
                         .IsConcurrencyToken()
-                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.HasKey("ID");
 
@@ -200,7 +203,8 @@ namespace CinemaReservation.Infrastructure.Migrations
                     b.HasIndex("SeatId");
 
                     b.HasIndex("ShowtimeId", "SeatId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"Status\"!=2");
 
                     b.ToTable("ReservationSeats");
                 });

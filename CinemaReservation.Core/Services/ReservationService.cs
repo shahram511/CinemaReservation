@@ -25,7 +25,7 @@ namespace CinemaReservation.Core.Services
 
 
         public async Task<Reservation> CreateReservationAsync(Guid userId, Guid showtimeId, List<Guid> seatIds)
-        {
+        {            
             var showtime = await _reservartinoRepository.GetShowtimeByIdAsync(showtimeId);
 
             if (showtime == null)            
@@ -63,11 +63,13 @@ namespace CinemaReservation.Core.Services
                     ReservationId = reservation.Id,
                     SeatId= seatId,
                     ShowtimeId  = showtimeId,
+                    Status = Enums.Enums.ReservationStatus.Confirmed,
                     Price = 15.00m,
                     
                     
                 });
-            }            
+            }        
+            
                 //pass the constructes objects to the infrastructure layer to handle the secure database transaction
                 return await _reservartinoRepository.CommitReservationTransactionAsync(reservation, reservationSeats);            
         }
@@ -102,7 +104,9 @@ namespace CinemaReservation.Core.Services
                 Status = r.Status.ToString(),
                 CreatedAt = r.CreatedAt,
                 
-                Seats = r.ReservationSeats.Select(rs => new ReservedSeatDto()
+                Seats = r.ReservationSeats
+                .Where(r =>r.Status ==Enums.Enums.ReservationStatus.Confirmed)
+                .Select(rs => new ReservedSeatDto()
                 
                 {
                     SeatId = rs.SeatId,

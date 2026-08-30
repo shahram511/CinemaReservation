@@ -1,21 +1,23 @@
 services:
   api:
     build:
-      context: ../ # Tells dockerfile to look one folder up
+      context: ../ 
       dockerfile: CinemaReservation.Api/Dockerfile 
     container_name: cinema_api
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
-      - mongodb
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__PostgresConnection=Host=postgres;Database=CinemaDb;Username=postgres;Password=pass123
       - MongoDbSettings__ConnectionString=mongodb://admin:pass123@mongodb:27017
   
   postgres:
-    image: postgres:latest
+    image: postgres:15-alpine
     container_name: cinema_postgres
     restart: unless-stopped
     environment:
@@ -25,7 +27,12 @@ services:
     ports:
       - "5432:5432"
     volumes:      
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d CinemaDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   mongodb:
     image: mongo:latest

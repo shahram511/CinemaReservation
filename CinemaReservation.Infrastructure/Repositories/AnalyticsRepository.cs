@@ -34,9 +34,9 @@ namespace CinemaReservation.Infrastructure.Repositories
                 MovieTitle = s.Movie.Title,
                 StartTime = s.StartTime,
                 TotalSeats = _context.Seats.Count(), //Assuming all 60 pyisical seats apply to every showtime
-                ReservedSeats = s.Reservations
-                    .Where(s => s.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
+                ReservedSeats = s.Reservations                    
                     .SelectMany(r => r.ReservationSeats)
+                    .Where(s => s.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
                     .Count()
             }).ToListAsync();
 
@@ -65,15 +65,15 @@ namespace CinemaReservation.Infrastructure.Repositories
                 MovieTitle = m.Title,
                 TotalTicketSold= m.Showtimes
                     .Where(s => (!fromDate.HasValue || s.StartTime>= fromDate.Value) && (!toDate.HasValue || s.StartTime <= toDate.Value))
-                    .SelectMany(s => s.Reservations)
-                    .Where(r  => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
+                    .SelectMany(s => s.Reservations)                    
                     .SelectMany(r => r.ReservationSeats)
+                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
                     .Count(),
                 TotalRevenue = m.Showtimes
                     .Where(s  => (!fromDate.HasValue || s.StartTime >=  fromDate.Value) && (!toDate.HasValue || s.StartTime <=toDate.Value))
-                    .SelectMany(s  =>  s.Reservations)                    
-                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
+                    .SelectMany(s  =>  s.Reservations)                                    
                     .SelectMany(s => s.ReservationSeats)
+                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
                     .Sum(rs => rs.Price)                  
             }).ToListAsync();
 
@@ -88,13 +88,13 @@ namespace CinemaReservation.Infrastructure.Repositories
             {
                 UserId = m.Id,
                 Email = m.Email,
-                TotalTicketsPurchased = m.Reservations
-                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
+                TotalTicketsPurchased = m.Reservations                    
                     .SelectMany(r => r.ReservationSeats)
+                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
                     .Count(),
-                LifeTimeValue = m.Reservations
-                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
+                LifeTimeValue = m.Reservations                    
                     .SelectMany(r => r.ReservationSeats)
+                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Confirmed)
                     .Sum(rs => rs.Price),
             }).OrderByDescending(s => s.LifeTimeValue).Take(count).ToListAsync();
 
@@ -111,13 +111,14 @@ namespace CinemaReservation.Infrastructure.Repositories
                 MovieTitle = m.Title,
                 TotaledCanceledTicket = m.Showtimes
                     .SelectMany(s => s.Reservations)
-                    .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Cancelled)
                     .SelectMany(r => r.ReservationSeats)
+                    .Where(rs => rs.Status == Core.Enums.Enums.ReservationStatus.Cancelled)                    
                     .Count(),
                 LostRevenue = m.Showtimes
                     .SelectMany(m => m.Reservations)
+                    .SelectMany(r => r.ReservationSeats)
                     .Where(r => r.Status == Core.Enums.Enums.ReservationStatus.Cancelled)                    
-                    .Sum(rs => rs.TotalPrice)
+                    .Sum(rs => rs.Price)
 
             }).OrderByDescending(s => s.LostRevenue).ToListAsync();
 

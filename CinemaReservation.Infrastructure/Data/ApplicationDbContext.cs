@@ -80,8 +80,12 @@ namespace CinemaReservation.Infrastructure.Data
             modelBuilder.Entity<ReservationSeat>(entity =>
             {
                 entity.HasKey(rs => rs.ID);
-                // create a composite primary key using both reservationId and seatId (prevents duplicate seat entries per reservation)
-                entity.HasIndex(rs => new { rs.ShowtimeId, rs.SeatId }).IsUnique();
+
+                // Apply the Filtered Index: Enforce uniqueness ONLY if the seate is not cancelled
+                // NOTE: PostgreSQL requires double qoutes around coulmn names if they match reserved keywords
+                entity.HasIndex(rs => new { rs.ShowtimeId, rs.SeatId })
+                    .IsUnique()
+                    .HasFilter("\"Status\"!=2");
 
                 // many to one  relationship from reservationseat to reservation
                 entity.HasOne(rs => rs.Reservation)

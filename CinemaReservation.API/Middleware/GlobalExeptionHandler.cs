@@ -24,14 +24,21 @@ namespace CinemaReservation.API.Middleware
                 Title =  "An unexpected error occurred.",
                 Detail = "Please check the logs or try again later,",
                 Instance = httpContext.Request.Path
-            };
+            };            
+
+            if (exception is KeyNotFoundException)
+            {
+                problemDetails.Status = StatusCodes.Status404NotFound;
+                problemDetails.Title = "Resource not fuond";
+                problemDetails.Detail = exception.Message;
+            }
 
             if (exception is ArgumentException || exception is InvalidOperationException)
             {
                 problemDetails.Status = StatusCodes.Status400BadRequest;
                 problemDetails.Title = "Invalid Request";
                 problemDetails.Detail = exception.Message;
-            }
+            }                        
 
             // Return standardizes JSON response
             httpContext.Response.StatusCode = problemDetails.Status.Value;

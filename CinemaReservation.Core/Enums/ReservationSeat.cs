@@ -14,9 +14,10 @@ namespace CinemaReservation.Core.Enums
         public decimal Price { get; set; }
 
         // Concurrency Token for EF Core
-        public byte[] Version { get; set; } = Array.Empty<byte>();
+        public uint Version { get; set; }
 
-        //public Core.Enums.Enums.ReservationStatus Status { get; set; } = Core.Enums.Enums.ReservationStatus.Pending;
+        //this property will help us to have the financial record of any seat was cancelled
+        public Enums.ReservationStatus Status { get; set; } = Enums.ReservationStatus.Pending;
 
         // Navigation Properties
         public Reservation? Reservation { get; set; }

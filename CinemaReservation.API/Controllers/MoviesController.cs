@@ -53,7 +53,7 @@ namespace CinemaReservation.API.Controllers
 
             var movie = await _movieService.CreateMovieAsync(request);
 
-            return CreatedAtAction(nameof(GetMovie), new {id = movie.Id}, new {Message = "Movie Created Susseccfully.", movieId = movie.Id});
+            return CreatedAtAction(nameof(GetMovie), new {id = movie.Id}, new {Message = "Movie Created Successfully.", movieId = movie.Id});
         }
 
         [HttpPut("{id}")]

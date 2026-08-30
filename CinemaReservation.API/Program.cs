@@ -23,6 +23,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+
 // Create a temporary scope to resolve the database context safely on startup
 using (var scope = app.Services.CreateScope())
 {
@@ -30,7 +31,14 @@ using (var scope = app.Services.CreateScope())
     var context = service.GetRequiredService<ApplicationDbContext>();
 
     // it automatically applies the migrations to create the tab
-    context.Database.Migrate();
+    if (context.Database.IsRelational())
+    {
+        context.Database.Migrate();
+    }
+    else
+    {
+        context.Database.EnsureCreated();
+    }   
 
     // Excute the seed logic
     DbSeeder.SeedSeats(context);
@@ -47,3 +55,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

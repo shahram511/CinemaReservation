@@ -64,7 +64,7 @@ namespace CinemaReservation.API.Controllers
             return Ok(new
             {
                 Message = "showtime added successfully.",
-                ShowTimeId = showtime.Id,
+                ShowtimeId = showtime.Id,
                 showtime.MovieId,
                 showtime.StartTime
             });

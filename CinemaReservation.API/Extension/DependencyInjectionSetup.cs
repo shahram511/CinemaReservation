@@ -27,9 +27,9 @@ namespace CinemaReservation.API.Extension
                 });
 
             // 2. OpenAPI
-            
+
             services.AddOpenApi();
-            
+
             // 3. Database Context
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(configuration.GetConnectionString("PostgresConnection")));
@@ -78,6 +78,5 @@ namespace CinemaReservation.API.Extension
 
             return services;
         }
-    }
-
+    }    
 }

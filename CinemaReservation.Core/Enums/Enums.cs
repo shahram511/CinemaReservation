@@ -18,9 +18,9 @@ namespace CinemaReservation.Core.Enums
 
         public enum ReservationStatus
         {
-            Pending,
-            Cancelled,
-            Confirmed,
+            Pending =0,            
+            Confirmed=1,
+            Cancelled =2,
         }
 
     }
