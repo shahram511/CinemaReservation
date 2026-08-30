@@ -1,0 +1,51 @@
+services:
+  api:
+    build:
+      context: ../ 
+      dockerfile: CinemaReservation.Api/Dockerfile 
+    container_name: cinema_api
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__PostgresConnection=Host=postgres;Database=CinemaDb;Username=postgres;Password=pass123
+      - MongoDbSettings__ConnectionString=mongodb://admin:pass123@mongodb:27017
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: cinema_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass123
+      POSTGRES_DB: CinemaDb 
+    ports:
+      - "5432:5432"
+    volumes:      
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d CinemaDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:latest
+    container_name: cinema_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: pass123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  postgres_data:
+  mongo_data:
