@@ -9,101 +9,178 @@ using System.Text.Json;
 using System.Net;
 using CinemaReservation.Core.Entities;
 using CinemaReservation.Core.DTOs.Anlaytics;
+using CinemaReservation.Infrastructure.Data;
+using MongoDB.Driver;
+using System.Net.Http.Json;
 
 namespace CinemaReservation.API.Tests.ControllerTests
 {
-    public class MovieCommentCotrollerTest : IClassFixture<CustomWebApplicationFactory>
+    [Collection("SharedDatabaseCollection")]
+    public class MovieCommentCotrollerTest : IntegrationTestBase
     {
-        private readonly CustomWebApplicationFactory _factory;
-        private readonly HttpClient _client;
-        public MovieCommentCotrollerTest(CustomWebApplicationFactory factory)
+        public MovieCommentCotrollerTest(SharedDatabaseFixture fixture) : base(fixture)
         {
-            _factory = factory;
-            _client = factory.CreateClient();
         }
+
 
         [Fact]
         public async Task AddComment_WithValidDataToken_ReturnsCreated()
         {
-            var mockRepo = _factory.Services.GetRequiredService<Mock<IMovieCommentRepository>>();
-            var requestDto = new CreateCommentDto { Text = "123" ,Rating = 5};
-            var testUserId= Guid.NewGuid();
             var testMovieId = Guid.NewGuid();
+            var requestDto = new CreateCommentDto { Text = "123" ,Rating = 5};
 
 
-            var fakeCommentEntitiy = new MovieComment()
+            // Arrange 
+            using var scope = Factory.Services.CreateScope();
+            var postgressContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            postgressContext.Movies.Add(new Movie
             {
-                Id =MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
-                MovieId = testMovieId,
-                UserName = "TestUser",
-                Text = requestDto.Text,
-                Rating = requestDto.Rating,               
-            };
+                Id = testMovieId,
+                Title = "test",
+                Description = "test",
+                Genre = "test",
+                PosterUrl = "test",
+                DurationInMinutes = 10
+            });
 
-            mockRepo.Setup(repo => repo.AddCommentAsync(It.IsAny<MovieComment>()))
-                .ReturnsAsync(fakeCommentEntitiy);
+            await postgressContext.SaveChangesAsync();            
 
             var jsonString = JsonSerializer.Serialize(requestDto);
+            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");    
+            
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
 
-            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");            
+            // Act : excute the actual HTTP request
+            var response = await Client.PostAsync($"/api/movie/{testMovieId}/MovieComment", content);
 
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
-
-            var response = await _client.PostAsync($"/api/movie/{testMovieId}/MovieComment", content);
-
+            // Assert : chcke the HTTP response
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            // verify that the mock repo's add method was executed exactly once during the API call
-            mockRepo.Verify(repo => repo.AddCommentAsync(It.IsAny<MovieComment>()), Times.Once);
+            // verify database state: Query the real MongoDB container
+            var mongoContext = scope.ServiceProvider.GetRequiredService<MongoContext>();
+
+            var savedComment = await mongoContext.MovieComments
+                .Find(c => c.MovieId == testMovieId && c.Text == requestDto.Text)
+                .FirstOrDefaultAsync();
+
+            savedComment.Should().NotBeNull();
+            savedComment.Rating.Should().Be(5);
+            savedComment.UserName.Should().NotBeNullOrEmpty();
+            savedComment.Text.Should().Be("123");
+
         }
 
         [Fact]
-        public async Task GetComment_ReturnsOk_WithMockedData()
+        public async Task GetComment_ReturnsOk_WithSeededData()
         {
-            var mockRepo = _factory.Services.GetRequiredService<Mock<IMovieCommentRepository>>();
-
+            // Arrange : prepare the environment before the test runs                       
             var testMovieId = Guid.NewGuid();
-            var fakeComments = new List<MovieComment>()
+
+            // create a dependency injection scope to resolve our database contexts
+            using var scope = Factory.Services.CreateScope();
+
+            var postgresContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            postgresContext.Movies.Add(new Movie()
             {
-                new MovieComment()
-                {
-                    MovieId = testMovieId,
-                    UserName = "test",
-                    Text = "good",
-                    Rating = 5
-                }
+                Id = testMovieId,
+                Title = "test",
+                Description = "for test",
+                PosterUrl = "test",
+                Genre = "action",
+                DurationInMinutes = 10
+            });
+
+            // physically save the movie to the postgreSQL Testcontainer
+            await postgresContext.SaveChangesAsync();
+
+            var mongoContext = scope.ServiceProvider.GetRequiredService<MongoContext>();
+
+            var mongoComment = new MovieComment()
+            {
+                Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                MovieId = testMovieId,
+                UserName = "shahram",
+                Text = "for test",
+                Rating = 4
+
             };
 
-            mockRepo.Setup(repo => repo.GetCommentsByMovieIdAsync(testMovieId)).ReturnsAsync(fakeComments);
+            await mongoContext.MovieComments.InsertOneAsync(mongoComment);
 
-            var response = await _client.GetAsync($"/api/movie/{testMovieId}/moviecomment");
+            // Act : excute the endponit 
+            var response = await Client.GetAsync($"/api/movie/{testMovieId}/MovieComment");
 
+            // Assert 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            mockRepo.Verify(repo => repo.GetCommentsByMovieIdAsync(testMovieId), Times.Once);
+            var returnedComments = await response.Content.ReadFromJsonAsync<List<MovieCommentResponseDto>>();
+
+            returnedComments.Should().NotBeNullOrEmpty();
+
+            // verify that the data returned from the API matches exactly what we seeded in MongoDB
+            var retrievedComment = returnedComments.First();
+            retrievedComment.Text.Should().Be("for test");
+            retrievedComment.Rating.Should().Be(4);
+            retrievedComment.UserName.Should().Be("shahram");           
         }
 
         [Fact]
         public async Task GetNumberCommentsAverageRate_ReturnsOk_WithAnalyticsData()
         {
-            var mockRepo = _factory.Services.GetRequiredService<Mock<IMovieCommentRepository>>();
-
+            // Arrange
             var testMovieId = Guid.NewGuid();
+            using var scope = Factory.Services.CreateScope();
 
-            var fakeAnalytics = new MovieEngagmentDto()
+            // seed the parent movie in the PostgreSQL
+            var postgresContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            postgresContext.Movies.Add(new Movie()
             {
-                TotalComments = 120,
-                AvrageRate = 4
+                Id = testMovieId,
+                Title = " inception",
+                Description = "test",
+                PosterUrl = "for test",
+                Genre = "action",
+                DurationInMinutes = 10
+            });
+
+            await postgresContext.SaveChangesAsync();
+
+            var mongoContext = scope.ServiceProvider.GetRequiredService<MongoContext>();
+
+            var comment1 = new MovieComment()
+            {
+                Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                MovieId = testMovieId,
+                UserName = "shahram",
+                Text = "for test1",
+                Rating = 5 
+
+            };
+            
+            var comment2 = new MovieComment()
+            {
+                Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString(),
+                MovieId = testMovieId,
+                UserName = "bahram",
+                Text = "for test2",
+                Rating = 3
             };
 
-            mockRepo.Setup(repo => repo.GetCommentsInfoByMovieIdRepoAsync(testMovieId)).ReturnsAsync(fakeAnalytics);
+            await mongoContext.MovieComments.InsertManyAsync(new[] { comment1, comment2 });
 
-            var response = await _client.GetAsync($"/api/movie/{testMovieId}/moviecomment/info");
+            // Act :  call the api
+            var response = await Client.GetAsync($"/api/movie/{testMovieId}/MovieComment/info");
 
+            // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            mockRepo.Verify(repo => repo.GetCommentsInfoByMovieIdRepoAsync(testMovieId), Times.Once);
-        }
+            // deserialize the JSON response back into the Dto
+            var analyticData = await response.Content.ReadFromJsonAsync<MovieEngagmentDto>();
 
+            analyticData.Should().NotBeNull();
+            analyticData.TotalComments.Should().Be(2);
+            analyticData.AvrageRate.Should().Be(4);
+        }
     }
 }

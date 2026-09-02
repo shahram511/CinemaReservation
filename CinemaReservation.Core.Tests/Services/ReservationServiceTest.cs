@@ -46,7 +46,7 @@ namespace CinemaReservation.Core.Tests.Services
                 await _service.CreateReservationAsync(userId, showtimeId, requestedSeatIds);
 
             // Assert
-            await action.Should().ThrowAsync<KeyNotFoundException>()
+            await action.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage("one or more selected seates are already booked.");
         }
 

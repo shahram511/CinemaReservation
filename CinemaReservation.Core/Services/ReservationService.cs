@@ -39,7 +39,7 @@ namespace CinemaReservation.Core.Services
             bool seatsAlreadyBooked = seatIds.Any(id => bookedSeateIds.Contains(id));
 
             if (seatsAlreadyBooked)            
-                throw new KeyNotFoundException("one or more selected seates are already booked.");
+                throw new InvalidOperationException("one or more selected seates are already booked.");
             
 
             var priceForTicket = 15.00m;

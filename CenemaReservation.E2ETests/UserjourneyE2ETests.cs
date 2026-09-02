@@ -1,5 +1,4 @@
 ﻿using CinemaReservation.Core.DTOs;
-using CinemaReservation.Core.Entities;
 using FluentAssertions;
 using System.Net;
 using System.Net.Http.Headers;
@@ -9,18 +8,13 @@ using Xunit;
 
 namespace CenemaReservation.E2ETests
 {
-    public class UserJourneyE2ETests
+    [Collection("E2ESharedDatabaseCollection")]
+    public class UserJourneyE2ETests : E2ETestBase
     {
-        // The live url where our API container exposed
-        private const string BaseApiUrl = "http://localhost:8080";
-        private readonly HttpClient _client;
-        public UserJourneyE2ETests()
-        {
-            _client = new HttpClient()
-            {
-                BaseAddress = new Uri(BaseApiUrl)
-            };
+        public UserJourneyE2ETests(E2ESharedDatabaseFixture fixture) : base(fixture)
+        {            
         }
+
 
         [Fact]
         public async Task CompleteUserJourney_LoginAdminMakeMovieAndShowtime_RegisterLoginRegularUser_UserBooking_UserComment_succeeds()
@@ -30,14 +24,14 @@ namespace CenemaReservation.E2ETests
             var adminLoginJsonString =  JsonSerializer.Serialize(adminLoginDto);
             var adminLoginContent = new StringContent(adminLoginJsonString, Encoding.UTF8, "application/json");
 
-            var adminLoginResponse = await _client.PostAsync("/api/auth/login",adminLoginContent);
+            var adminLoginResponse = await Client.PostAsync("/api/auth/login",adminLoginContent);
             adminLoginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             var adminToken = JsonDocument.Parse(await adminLoginResponse.Content.ReadAsStringAsync())
                 .RootElement.GetProperty("token").GetString();
 
             // attach admin JWT for catolog creation
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
 
             // 2. ========ADMIN SETUP : CREATE MOVIE AND SHOWTIME========
             var movieDto = new CreateMovieDto()
@@ -51,7 +45,7 @@ namespace CenemaReservation.E2ETests
             var movieJsonString = JsonSerializer.Serialize(movieDto);
             var movieContent = new StringContent(movieJsonString, Encoding.UTF8, "application/json");
 
-            var movieResponse = await _client.PostAsync("/api/movies", movieContent);
+            var movieResponse = await Client.PostAsync("/api/movies", movieContent);
             movieResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
             var movieId = JsonDocument.Parse(await movieResponse.Content.ReadAsStringAsync())
@@ -65,7 +59,7 @@ namespace CenemaReservation.E2ETests
             var showtimeJsonString = JsonSerializer.Serialize(showtimeDto);
             var showtimeContent = new StringContent(showtimeJsonString, Encoding.UTF8, "application/json");
 
-            var showtimeResponse = await _client.PostAsync($"/api/showtime/{movieId}/showtimes", showtimeContent);
+            var showtimeResponse = await Client.PostAsync($"/api/showtime/{movieId}/showtimes", showtimeContent);
             showtimeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             var showtimeId = JsonDocument.Parse(await showtimeResponse.Content.ReadAsStringAsync())
@@ -88,7 +82,7 @@ namespace CenemaReservation.E2ETests
             var registerContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
             // send a real network request to the rinning container
-            var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);          
+            var registerResponse = await Client.PostAsync("/api/auth/register", registerContent);          
 
             // assert that the user was successfully persisted in the real PostgreSQL database
             registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -103,7 +97,7 @@ namespace CenemaReservation.E2ETests
             var loginjsonString = JsonSerializer.Serialize(loginDto);
             var loginContent = new StringContent(loginjsonString, Encoding.UTF8, "application/json");
 
-            var loginResponse = await _client.PostAsync("/api/auth/login", loginContent);
+            var loginResponse = await Client.PostAsync("/api/auth/login", loginContent);
             loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             // read and pars the JSON response body to extract the real JWT
@@ -118,11 +112,11 @@ namespace CenemaReservation.E2ETests
             jwtToken.Should().NotBeNullOrWhiteSpace();
 
             // attach the real JWT token to all subsequent requests for this client
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
             // ======FETCH CATALOG ABAILABLE SEATES======
             // call the endpoin to get available seats for this specific showtime
-            var seatsResponse = await _client.GetAsync($"/api/showtime/{showtimeId}/seats");
+            var seatsResponse = await Client.GetAsync($"/api/showtime/{showtimeId}/seats");
             seatsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             var seatsJson = await seatsResponse.Content.ReadAsStringAsync();
@@ -136,7 +130,7 @@ namespace CenemaReservation.E2ETests
                 .GetGuid();
             
 
-            // BOOK THE RESERVATION
+            // ======BOOK THE RESERVATION========
             // build the payload mapping to our reservation DTO
             var reservationDto = new CreateReservationDto()
             {
@@ -148,7 +142,7 @@ namespace CenemaReservation.E2ETests
             var reservationContent = new StringContent(reservationJson, Encoding.UTF8, "application/json");
 
             // send the authenticated POST request to lock the seat
-            var bookingResponse = await _client.PostAsync("/api/reservation", reservationContent);
+            var bookingResponse = await Client.PostAsync("/api/reservation", reservationContent);          
             bookingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             //=====LEAVE A COMMENT =====
@@ -162,7 +156,7 @@ namespace CenemaReservation.E2ETests
             var commentJson = JsonSerializer.Serialize(commentDto);
             var commentContent = new StringContent(commentJson, Encoding.UTF8, "application/json");
 
-            var commentResponse = await _client.PostAsync($"/api/movie/{movieId}/MovieComment", commentContent);
+            var commentResponse = await Client.PostAsync($"/api/movie/{movieId}/MovieComment", commentContent);
 
             commentResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         }

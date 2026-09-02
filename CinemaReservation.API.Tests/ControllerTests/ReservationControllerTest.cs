@@ -13,15 +13,11 @@ using CinemaReservation.Core.Enums;
 
 namespace CinemaReservation.API.Tests.ControllerTests
 {
-    public class ReservationControllerTest  :IClassFixture<CustomWebApplicationFactory>
+    [Collection("SharedDatabaseCollection")]
+    public class ReservationControllerTest  : IntegrationTestBase
     {
-        private readonly CustomWebApplicationFactory _factory;
-        private readonly HttpClient _client;
-
-        public ReservationControllerTest(CustomWebApplicationFactory factory)
-        {
-            _factory = factory;
-            _client = factory.CreateClient();
+        public ReservationControllerTest(SharedDatabaseFixture fixture) : base(fixture)
+        {            
         }
 
         [Fact]
@@ -33,13 +29,13 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var movieId = Guid.NewGuid();
             var seatId = Guid.NewGuid();            
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
                 dbContext.Users.Add(new User{Id = testUserId,Username = "test"});
                 dbContext.Movies.Add(new Movie { Id = movieId, Title = "title", Description = "test", PosterUrl = "test", Genre = "test", DurationInMinutes = 10 });
-                dbContext.Showtimes.Add(new Showtime{Id = showtimeId, MovieId = movieId, StartTime = DateTime.Now.AddDays(1)});
+                dbContext.Showtimes.Add(new Showtime{Id = showtimeId, MovieId = movieId, StartTime = DateTime.UtcNow.AddDays(1)});
                 dbContext.Seats.Add(new Seat{ Id = seatId, SeatRow = "A", SeatNumber = 2});
 
                 var userReservation = new Reservation()
@@ -59,12 +55,12 @@ namespace CinemaReservation.API.Tests.ControllerTests
             }
 
             // attach the fake authentication scheme
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
 
             // Act
 
             // send the GET request to the endpoint
-            var response = await _client.GetAsync("/api/reservation/my-reservations");
+            var response = await Client.GetAsync("/api/reservation/my-reservations");
 
             // Assert
             // verify the request passed the authorization check and succeeded
@@ -93,14 +89,14 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var movieId = Guid.NewGuid();
             var seatId = Guid.NewGuid();
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 // Arrange
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 
                 dbContext.Users.Add(new User { Id = testUserId, Username = "test" });
                 dbContext.Movies.Add(new Movie { Id = movieId, Title = "title", Description = "test", PosterUrl = "test", Genre = "test", DurationInMinutes = 10 });
-                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.Now.AddDays(1) });
+                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.UtcNow.AddDays(1) });
                 dbContext.Seats.Add(new Seat { Id = seatId, SeatRow = "A", SeatNumber = 2 });
 
                 await dbContext.SaveChangesAsync();            
@@ -115,15 +111,15 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var jsonString = JsonSerializer.Serialize(requestDto);
             var httpContent = new  StringContent(jsonString, Encoding.UTF8, "application/json"); 
 
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
 
             // Act
-            var reseponse = await _client.PostAsync("/api/reservation",httpContent );
+            var reseponse = await Client.PostAsync("/api/reservation",httpContent );
 
             // Assert
             reseponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -155,13 +151,13 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var seat1Id = Guid.NewGuid();
             var seat2Id = Guid.NewGuid();
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
                 dbContext.Users.Add(new User { Id = testUserId, Username = "test" });
                 dbContext.Movies.Add(new Movie { Id = movieId, Title = "title", Description = "test", PosterUrl = "test", Genre = "test", DurationInMinutes = 10 });
-                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.Now.AddDays(1) });
+                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.UtcNow.AddDays(1) });
                 dbContext.Seats.Add(new Seat { Id = seat1Id, SeatRow = "A", SeatNumber = 1 });
                 dbContext.Seats.Add(new Seat { Id = seat2Id, SeatRow = "A", SeatNumber = 2 });
 
@@ -199,14 +195,14 @@ namespace CinemaReservation.API.Tests.ControllerTests
                 await dbContext.SaveChangesAsync();
             }
 
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Testschme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Testschme");
 
             // Act
-            var response = await _client.DeleteAsync($"/api/reservation/{reservationId}");
+            var response = await Client.DeleteAsync($"/api/reservation/{reservationId}");
 
             // Assert 
             response.IsSuccessStatusCode.Should().BeTrue();
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -231,13 +227,13 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var seatToRemoveId = Guid.NewGuid();
             var seatToKeepId = Guid.NewGuid();
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
                 dbContext.Users.Add(new User { Id = testUserId, Username = "test" });
                 dbContext.Movies.Add(new Movie { Id = movieId, Title = "title", Description = "test", PosterUrl = "test", Genre = "test", DurationInMinutes = 10 });
-                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.Now.AddDays(1) });
+                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.UtcNow.AddDays(1) });
                 dbContext.Seats.Add(new Seat { Id = seatToRemoveId, SeatRow = "A", SeatNumber = 1 });
                 dbContext.Seats.Add(new Seat { Id = seatToKeepId, SeatRow = "A", SeatNumber = 2 });
 
@@ -258,15 +254,15 @@ namespace CinemaReservation.API.Tests.ControllerTests
 
                 await dbContext.SaveChangesAsync();
             }
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
 
             // Act 
-            var response = await _client.DeleteAsync($"/api/reservation/{reservationId}/seats/{seatToRemoveId}");
+            var response = await Client.DeleteAsync($"/api/reservation/{reservationId}/seats/{seatToRemoveId}");
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var updatReservation = await dbContext.Reservations

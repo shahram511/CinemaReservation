@@ -39,7 +39,7 @@ namespace CinemaReservation.Core.Services
             return await _analyticsRepository.GetTopcuctomersAsync(count);            
         }
 
-        public async Task<IEnumerable<CancellationImpcatDto>> GetMostCanceledMovieAndLostRevenueServiceAsync()
+        public async Task<IEnumerable<CancellationImpactDto>> GetMostCanceledMovieAndLostRevenueServiceAsync()
         {
             return await _analyticsRepository.GetMostCanceledMovieAndLostRevenueRepoAsync();
         }

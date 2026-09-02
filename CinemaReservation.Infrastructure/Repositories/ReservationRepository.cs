@@ -42,12 +42,10 @@ namespace CinemaReservation.Infrastructure.Repositories
 
                 await _context.SaveChangesAsync();
                 return reservation;
-            }            
-            catch (Exception ex)
-            {
-                //throw new InvalidOperationException("One or more of the selected seats were just booked by someone else");
-                string realErroMessage = ex.InnerException != null ? ex.InnerException.Message:ex.Message;
-                throw new Exception(realErroMessage);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
+            {                
+                throw new InvalidOperationException("Seat is already reserved.");
             }
         }
 

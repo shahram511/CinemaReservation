@@ -11,14 +11,11 @@ using System.Text.Json;
 
 namespace CinemaReservation.API.Tests.ControllerTests
 {
-    public class AuthControllerTest : IClassFixture<CustomWebApplicationFactory>
+    [Collection("SharedDatabaseCollection")]
+    public class AuthControllerTest : IntegrationTestBase
     {
-        private readonly CustomWebApplicationFactory _factory;
-        private readonly HttpClient _client;
-        public AuthControllerTest(CustomWebApplicationFactory factory)
-        {
-            _factory = factory;
-            _client = factory.CreateClient();
+        public AuthControllerTest(SharedDatabaseFixture fixture) : base(fixture)
+        {            
         }
 
         [Fact]
@@ -36,7 +33,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
             // Act
-            var resepons = await _client.PostAsync("/api/auth/register", content);
+            var resepons = await Client.PostAsync("/api/auth/register", content);
 
             // Assert 
             resepons.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -45,7 +42,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             responseText.Should().Contain("user registerd successfully");
 
             // verify database state
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContenxt = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var userExists = await dbContenxt.Users.AnyAsync(u => u.Username == "Test");
@@ -61,7 +58,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var testUsername = "LoginTest";
             var testPassword = "ValidPassword";
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
                 await authService.RegisterUserAsync(testUsername, "login@cinema.com", testPassword);
@@ -77,7 +74,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
             
             // Act 
-            var response  = await _client.PostAsync("/api/auth/login",content);
+            var response  = await Client.PostAsync("/api/auth/login",content);
 
             // Assert  
             response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -108,7 +105,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
             // Act
-            var response = await _client.PostAsync("/api/auth/register", content);
+            var response = await Client.PostAsync("/api/auth/register", content);
 
             // Assert 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

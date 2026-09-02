@@ -33,18 +33,32 @@ namespace CinemaReservation.API.Middleware
                 problemDetails.Detail = exception.Message;
             }
 
+            if (exception is KeyNotFoundException) 
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+                await httpContext.Response.WriteAsJsonAsync(new { Error = exception.Message }, cancellationToken);
+                return true;
+            }
+
             if (exception is ArgumentException || exception is InvalidOperationException)
             {
                 problemDetails.Status = StatusCodes.Status400BadRequest;
                 problemDetails.Title = "Invalid Request";
+                
+                
                 problemDetails.Detail = exception.Message;
-            }                        
+            }      
+            
+            if (exception is InvalidOperationException)
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+                await httpContext.Response.WriteAsJsonAsync(new {Error = exception.Message}, cancellationToken);
+                return true;
+            }
 
-            // Return standardizes JSON response
-            httpContext.Response.StatusCode = problemDetails.Status.Value;
-            await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-            // Return true to tell .NET the  exception has beem handled and shouldnt crash the app
+            // default fallback for real server crashes
+            httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await httpContext.Response.WriteAsJsonAsync(new { Error = "An unexpected error occurred."}, cancellationToken);
             return true;
         }
     }

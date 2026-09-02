@@ -14,6 +14,6 @@ namespace CinemaReservation.Core.Interfaces
         // Calulates Revenu per movie, optionally filterd by Date
         Task<IEnumerable<MovieRevenueDto>> GetMovieRevenuesAsync(DateTime? fromDate = null, DateTime? toDate = null);
         Task<IEnumerable<TopCustomersDto>> GetTopcuctomersAsync(int count);
-        Task<IEnumerable<CancellationImpcatDto>> GetMostCanceledMovieAndLostRevenueRepoAsync();
+        Task<IEnumerable<CancellationImpactDto>> GetMostCanceledMovieAndLostRevenueRepoAsync();
     }
 }

@@ -11,15 +11,12 @@ using System.Text.Json;
 
 namespace CinemaReservation.API.Tests.ControllerTests
 {
-    public class MovieControllerTest : IClassFixture<CustomWebApplicationFactory>
+    [Collection("SharedDatabaseCollection")]
+    public class MovieControllerTest : IntegrationTestBase
     {
-        private readonly CustomWebApplicationFactory _factory;
-        private readonly HttpClient _client;
 
-        public MovieControllerTest(CustomWebApplicationFactory factory)
-        {
-            _factory = factory;
-            _client = factory.CreateClient();
+        public MovieControllerTest(SharedDatabaseFixture fixture) : base(fixture)
+        {            
         }
 
         [Fact]
@@ -29,7 +26,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var url = "/api/movies";  // The endpoin url
 
             // Act
-            var response = await _client.GetAsync(url); // Sending  a real HTTP GET request  to the API
+            var response = await Client.GetAsync(url); // Sending  a real HTTP GET request  to the API
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK); // We expect  a 200 OK status code
@@ -46,7 +43,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var movieId = Guid.NewGuid();
             var expectedTitle = "inception";
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var movie = new Movie()
@@ -62,7 +59,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
                 await dbContext.SaveChangesAsync();
             }
                 // Act(send a request)
-            var response = await _client.GetAsync($"/api/movies/{movieId}");
+            var response = await Client.GetAsync($"/api/movies/{movieId}");
 
             // Assert (verify a response)
             response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -85,7 +82,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
         {
             var nonExistesMovieId = Guid.NewGuid();
 
-            var response = await _client.GetAsync($"/api/movies/{nonExistesMovieId}");
+            var response = await Client.GetAsync($"/api/movies/{nonExistesMovieId}");
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
@@ -107,10 +104,10 @@ namespace CinemaReservation.API.Tests.ControllerTests
 
             var httpContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
 
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
 
             // Act
-            var response =  await _client.PostAsync("/api/movies", httpContent);
+            var response =  await Client.PostAsync("/api/movies", httpContent);
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -125,7 +122,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             // Arrange
             var movieId = Guid.NewGuid();
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var initialMvoie = new Movie()
@@ -157,15 +154,15 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var jsonString = JsonSerializer.Serialize(updatedDto);
             var httpContent = new StringContent(jsonString,Encoding.UTF8, "application/json");
 
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestAscheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestAscheme");
 
             // Act
-            var response = await _client.PutAsync($"/api/movies/{movieId}", httpContent);
+            var response = await Client.PutAsync($"/api/movies/{movieId}", httpContent);
 
             // Assert
             response.IsSuccessStatusCode.Should().BeTrue();
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbcContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext> ();
                 var updatedMovie = await dbcContext.Movies.FindAsync(movieId);
@@ -182,7 +179,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var movieId = Guid.NewGuid();
 
             //seed the  movie into the database
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 dbContext.Movies.Add(new Movie { Id = movieId, Title = "Movie to delete" });
@@ -190,16 +187,16 @@ namespace CinemaReservation.API.Tests.ControllerTests
             }
 
             //add fake authentication
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestAScheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestAScheme");
 
             // Act 
-            var response = await _client.DeleteAsync($"/api/movies/{movieId}");
+            var response = await Client.DeleteAsync($"/api/movies/{movieId}");
 
             // Assert 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
             // verify the movie is completely gone from the database
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var deletedMovie = await dbContext.Movies.FindAsync(movieId);
@@ -215,7 +212,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var movieId = Guid.NewGuid();
 
             // send the target movie into the in-memory database
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = Factory.Services.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 dbContext.Movies.Add(new Movie
@@ -246,10 +243,10 @@ namespace CinemaReservation.API.Tests.ControllerTests
             multipartForm.Add(fileContent,"file", "movie_poster.jpeg");
 
             // apply fake authentication bypass
-            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Testscheme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Testscheme");
 
             // Act
-            var response = await _client.PostAsync($"/api/movies/{movieId}/poster", multipartForm);
+            var response = await Client.PostAsync($"/api/movies/{movieId}/poster", multipartForm);
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK);

@@ -101,11 +101,11 @@ namespace CinemaReservation.Infrastructure.Repositories
             return topCustomers;
         }
 
-        public async Task<IEnumerable<CancellationImpcatDto>> GetMostCanceledMovieAndLostRevenueRepoAsync()
+        public async Task<IEnumerable<CancellationImpactDto>> GetMostCanceledMovieAndLostRevenueRepoAsync()
         {
             var query = _context.Movies.AsNoTracking();
 
-            var result = await query.Select(m => new CancellationImpcatDto()
+            var result = await query.Select(m => new CancellationImpactDto()
             {
                 MovieId = m.Id,
                 MovieTitle = m.Title,

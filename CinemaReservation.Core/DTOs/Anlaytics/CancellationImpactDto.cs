@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CinemaReservation.Core.DTOs.Anlaytics
 {
-    public class CancellationImpcatDto
+    public class CancellationImpactDto
     {
         public Guid MovieId { get; set; }
         public string MovieTitle { get; set; }
