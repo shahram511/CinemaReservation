@@ -26,3 +26,23 @@ The entire application environment, including the database infrastructure, is co
 2. **Build and Run:** Execute the following command to provision the databases and launch the API:
    ```bash
    docker compose up --build -d
+   ```
+3. **Access the API:** Navigate to `http://localhost:8080/scalar/v1` in your browser to view the interactive endpoints.
+4. **Local Debugging:** You can also run the API directly via Visual Studio/VS Code (which will bind to a local port like 7228) while keeping the database containers running in the background.
+
+## Testing Infrastructure
+The testing suite is designed for zero-friction CI/CD pipeline integration and absolute environment isolation. 
+
+* **Environment-Agnostic Execution:** The End-to-End (E2E) and integration test suites utilize **Testcontainers**. The framework dynamically provisions temporary PostgreSQL and MongoDB instances directly via the Docker daemon for each test run.
+* **Deterministic State:** **Respawn** is used to rapidly clear transactional data between test methods, ensuring a clean slate without dropping critical seeded infrastructure (e.g., Admin accounts and physical Seat maps).
+* **Authentic Security Validation:** E2E tests strictly bypass mock authentication handlers. The test suite issues real HTTP requests, generates real JWTs, and validates precise `UserId` claim extractions against actual PostgreSQL Foreign Key constraints.
+
+**Running the Test Suite:**
+Execute the following command in the root directory. Testcontainers will automatically pull the required database images, map available network ports, execute the suite, and tear down the temporary containers.
+
+```bash
+dotnet test
+```
+
+## Project URL
+**Roadmap.sh Project:** [Movie Reservation System](https://roadmap.sh/projects/movie-reservation-system)
