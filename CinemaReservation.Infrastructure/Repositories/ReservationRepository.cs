@@ -1,5 +1,6 @@
 ﻿using CinemaReservation.Core.Entities;
 using CinemaReservation.Core.Enums;
+using CinemaReservation.Core.Exceptions;
 using CinemaReservation.Core.Interfaces;
 using CinemaReservation.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,7 @@ namespace CinemaReservation.Infrastructure.Repositories
             }
             catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "23505")
             {                
-                throw new InvalidOperationException("Seat is already reserved.");
+                throw new ConflictException("Seat is already reserved.");
             }
         }
 

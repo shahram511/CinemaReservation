@@ -1,4 +1,5 @@
 ﻿using CinemaReservation.Core.Entities;
+using CinemaReservation.Core.Exceptions;
 using CinemaReservation.Core.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -25,13 +26,13 @@ namespace CinemaReservation.Core.Services
             var user = await _userRepository.GetUserByUssernameAsync(username);
 
             if (user == null)            
-                throw new Exception("Invalid username or password");
+                throw new UnauthorizedException("Invalid username or password");
             
 
             bool isPasswordCorrect = BCrypt.Net.BCrypt.Verify(plainTextPassword, user.PasswordHash);
 
             if (!isPasswordCorrect)            
-                throw new Exception("Invalid username or password!");
+                throw new UnauthorizedException("Invalid username or password");
             
 
             string secretKey = _configuration["JwtSettings:Secret"] ?? throw new Exception("jwt token is missing!");
@@ -71,7 +72,7 @@ namespace CinemaReservation.Core.Services
             bool userExisting = await _userRepository.UserExistAsync(username,email);
 
             if (userExisting)            
-                throw new Exception("username or email already taken !!");
+                throw new ConflictException("username or email already taken !!");
            
 
             string hashesPassword = BCrypt.Net.BCrypt.HashPassword(plainTextPassword);

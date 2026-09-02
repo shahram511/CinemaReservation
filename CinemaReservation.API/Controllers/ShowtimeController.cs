@@ -28,9 +28,6 @@ namespace CinemaReservation.API.Controllers
         public async Task<IActionResult> GetAvailableSeats(Guid showtimeId)
         {
             var seats = await _reservationService.GetSeatAvailabilityAsync(showtimeId);
-            if (seats.Count == 0)            
-                return NotFound(new { Message = "No Seats found for this showtime" });
-            
             return Ok(seats);
         }
 

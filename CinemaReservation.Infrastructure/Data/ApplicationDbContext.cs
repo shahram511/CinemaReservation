@@ -30,6 +30,7 @@ namespace CinemaReservation.Infrastructure.Data
 
                 // Ensures no two users can have the same username
                 entity.HasIndex(e => e.Username).IsUnique();
+                entity.HasIndex(e => e.Email).IsUnique();
             });
 
             // Showtime configuration-------
@@ -97,7 +98,12 @@ namespace CinemaReservation.Infrastructure.Data
                 entity.HasOne(rs => rs.Seat)
                     .WithMany(s => s.ReservationSeats)
                     .HasForeignKey(rs => rs.SeatId)
-                    .OnDelete(DeleteBehavior.Restrict); // restrict deletion : never delete a physical seat  just beacuse a reservation was cancelled
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Showtime>()
+                    .WithMany()
+                    .HasForeignKey(rs => rs.ShowtimeId)
+                    .OnDelete(DeleteBehavior.Cascade); // restrict deletion : never delete a physical seat  just beacuse a reservation was cancelled
 
 
                 // Concurrency Token mapping for PostgreSQL (Uses an internal hidden column called xmin)

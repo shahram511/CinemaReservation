@@ -25,7 +25,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
             var requestDto = new RegisterUserDto()
             {
                 Username = "Test",
-                Email = "Test@.com",
+                Email = "test@cinema.com",
                 Password = "password"
             };
 
@@ -109,6 +109,29 @@ namespace CinemaReservation.API.Tests.ControllerTests
 
             // Assert 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task Login_ShouldReturnUnauthorized_WhenPasswordIsWrong()
+        {
+            using (var scope = Factory.Services.CreateScope())
+            {
+                var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
+                await authService.RegisterUserAsync("WrongPassUser", "wrongpass@cinema.com", "ValidPassword");
+            }
+
+            var requestDto = new LoginUserDto
+            {
+                Username = "WrongPassUser",
+                Password = "incorrect"
+            };
+
+            var jsonString = JsonSerializer.Serialize(requestDto);
+            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+
+            var response = await Client.PostAsync("/api/auth/login", content);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
     }
 }

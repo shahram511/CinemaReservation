@@ -1,15 +1,8 @@
 ﻿using CinemaReservation.Core.DTOs;
 using CinemaReservation.Core.Entities;
-using CinemaReservation.Core.Enums;
+using CinemaReservation.Core.Exceptions;
 using CinemaReservation.Core.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Text;
-
-
-
+using CinemaReservation.Core.Enums;
 
 namespace CinemaReservation.Core.Services
 {
@@ -22,40 +15,41 @@ namespace CinemaReservation.Core.Services
             _reservartinoRepository = reservartinoRepository;
         }
 
-
-
         public async Task<Reservation> CreateReservationAsync(Guid userId, Guid showtimeId, List<Guid> seatIds)
         {            
             var showtime = await _reservartinoRepository.GetShowtimeByIdAsync(showtimeId);
 
             if (showtime == null)            
                 throw new KeyNotFoundException("Showtime not found.");
-            
 
-            // Fetch the list of seats that are already booked for this showtime
+            if (showtime.StartTime <= DateTime.UtcNow)
+                throw new InvalidOperationException("Cannot book seats for a showtime that has already started.");
+
+            var distinctSeatIds = seatIds.Distinct().ToList();
+            var existingSeats = await _reservartinoRepository.GetSeatsByIdsAsync(distinctSeatIds);
+
+            if (existingSeats.Count != distinctSeatIds.Count)
+                throw new KeyNotFoundException("One or more selected seats were not found.");
+
             var bookedSeateIds = await _reservartinoRepository.GetBookedSeatIdsForShowtimeAsync(showtimeId);
             
-            // Check if any of the requested seat IDs intersect with the already booked seat IDs
-            bool seatsAlreadyBooked = seatIds.Any(id => bookedSeateIds.Contains(id));
+            bool seatsAlreadyBooked = distinctSeatIds.Any(id => bookedSeateIds.Contains(id));
 
             if (seatsAlreadyBooked)            
-                throw new InvalidOperationException("one or more selected seates are already booked.");
-            
+                throw new ConflictException("one or more selected seates are already booked.");
 
-            var priceForTicket = 15.00m;
-            // Business Logic: Calculate price(e.g. 15$ per seat)
+            var priceForTicket = showtime.TicketPrice;
             var reservation = new Reservation()
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
                 ShowtimeId= showtimeId,
-                TotalPrice = seatIds.Count*priceForTicket,
+                TotalPrice = distinctSeatIds.Count * priceForTicket,
                 Status = Enums.Enums.ReservationStatus.Confirmed
             };
 
-
             var reservationSeats = new List<ReservationSeat>();
-            foreach (var seatId in seatIds)
+            foreach (var seatId in distinctSeatIds)
             {
                 reservationSeats.Add(new ReservationSeat()
                 {
@@ -64,19 +58,19 @@ namespace CinemaReservation.Core.Services
                     SeatId= seatId,
                     ShowtimeId  = showtimeId,
                     Status = Enums.Enums.ReservationStatus.Confirmed,
-                    Price = 15.00m,
-                    
-                    
+                    Price = priceForTicket,
                 });
             }        
             
-                //pass the constructes objects to the infrastructure layer to handle the secure database transaction
-                return await _reservartinoRepository.CommitReservationTransactionAsync(reservation, reservationSeats);            
+            return await _reservartinoRepository.CommitReservationTransactionAsync(reservation, reservationSeats);            
         }
 
         public async Task<List<SeatAvailabilityDto>> GetSeatAvailabilityAsync(Guid showtimeId)
         {
-            // Fetch the raw data from the database using our two separate, lightweight repository calls
+            var showtime = await _reservartinoRepository.GetShowtimeByIdAsync(showtimeId);
+            if (showtime == null)
+                throw new KeyNotFoundException("Showtime not found.");
+
             var allSeats = await _reservartinoRepository.GetAllSestsAsync();
             var bookedSeatsIds = await _reservartinoRepository.GetBookedSeatIdsForShowtimeAsync(showtimeId);
 
@@ -92,7 +86,6 @@ namespace CinemaReservation.Core.Services
         public async Task<List<UserReservartionDto>> GetUserReservationAsync(Guid userId)
         {
             var reservations = await _reservartinoRepository.GetReservationByUserIdAsync(userId);
-            // Use LINQ to map the list of reservation entities into a list of UserRservationDto objects.
             var result = reservations.Select(r => new UserReservartionDto()
             {
                 ReservationId = r.Id,
@@ -100,14 +93,13 @@ namespace CinemaReservation.Core.Services
                 MovieTitle = r.Showtime?.Movie?.Title ?? "Unknown Movie",
                 ShowtimeStart = r.Showtime?.StartTime ?? DateTime.MinValue,
                 TotalPrice = r.TotalPrice,
-                UserName =  r.User.Username,
+                UserName =  r.User?.Username ?? string.Empty,
                 Status = r.Status.ToString(),
                 CreatedAt = r.CreatedAt,
                 
                 Seats = r.ReservationSeats
-                .Where(r =>r.Status ==Enums.Enums.ReservationStatus.Confirmed)
+                .Where(rs => rs.Status == Enums.Enums.ReservationStatus.Confirmed)
                 .Select(rs => new ReservedSeatDto()
-                
                 {
                     SeatId = rs.SeatId,
                     Row = rs.Seat?.SeatRow ?? "",
@@ -117,25 +109,22 @@ namespace CinemaReservation.Core.Services
             }).ToList(); 
 
             return result; 
-
         }
+
         public async Task CancelReservationAsync(Guid userId, Guid reservationId)
         {
             var reservation = await _reservartinoRepository.GetReservationByRservationIdAsync(reservationId);
 
             if (reservation == null)            
-                throw new Exception("Reservation not found,");
-            
+                throw new KeyNotFoundException("Reservation not found.");
 
-            if (reservation.UserId!= userId)            
-                throw new Exception("You do not permission to cancel this reservation.");
-            
+            if (reservation.UserId != userId)            
+                throw new ForbiddenException("You do not have permission to cancel this reservation.");
 
-            var currentTime = DateTime.UtcNow;
+            if (reservation.Status == Enums.Enums.ReservationStatus.Cancelled)
+                throw new InvalidOperationException("Reservation is already cancelled.");
 
-            if (reservation.Showtime?.StartTime <= currentTime.AddHours(2))            
-                throw new Exception("Reservations cannot be cancelled within 1 hour of the showtime.");
-            
+            EnsureOutsideCancellationWindow(reservation.Showtime);
 
             await _reservartinoRepository.DeleteReservationAsync(reservation);
         }
@@ -145,23 +134,26 @@ namespace CinemaReservation.Core.Services
             var reservation = await _reservartinoRepository.GetReservationWithSeatsByIdAsync(reservationId);
 
             if (reservation == null)
-                throw new Exception("Reservation not found.");
+                throw new KeyNotFoundException("Reservation not found.");
 
             if (reservation.UserId != userId)
-                throw new Exception("You do not have permission to midigy this reservation");
+                throw new ForbiddenException("You do not have permission to modify this reservation.");
 
-            var currentTime = DateTime.UtcNow;
+            if (reservation.Status == Enums.Enums.ReservationStatus.Cancelled)
+                throw new InvalidOperationException("Reservation is already cancelled.");
 
-            if (reservation.Showtime?.StartTime <= currentTime.AddHours(2))
-                throw new Exception("Reservation cannot be modified within 2 hours of the showtime.");
+            EnsureOutsideCancellationWindow(reservation.Showtime);
 
-            var seatToRemove = reservation.ReservationSeats.FirstOrDefault(rs => rs.SeatId == SeatId);
+            var confirmedSeats = reservation.ReservationSeats
+                .Where(rs => rs.Status == Enums.Enums.ReservationStatus.Confirmed)
+                .ToList();
+
+            var seatToRemove = confirmedSeats.FirstOrDefault(rs => rs.SeatId == SeatId);
 
             if (seatToRemove == null)
-                throw new Exception("This seat is not part of your reservation");
+                throw new KeyNotFoundException("This seat is not part of your reservation.");
 
-            // If this iis the vety last seat in the reservation, just delete the whole reservation
-            if (reservation.ReservationSeats.Count == 1)
+            if (confirmedSeats.Count == 1)
             {
                 await _reservartinoRepository.DeleteReservationAsync(reservation);
                 return;
@@ -170,6 +162,15 @@ namespace CinemaReservation.Core.Services
             reservation.TotalPrice -= seatToRemove.Price;
 
             await _reservartinoRepository.UpdatReservationAndRemoveSeatAsync(reservation, seatToRemove);                            
+        }
+
+        private static void EnsureOutsideCancellationWindow(Showtime? showtime)
+        {
+            if (showtime == null)
+                throw new InvalidOperationException("Reservation cannot be cancelled because its showtime is missing.");
+
+            if (showtime.StartTime <= DateTime.UtcNow.AddHours(2))
+                throw new InvalidOperationException("Reservations cannot be cancelled within 2 hours of the showtime.");
         }
     }
 }

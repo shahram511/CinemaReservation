@@ -49,7 +49,13 @@ namespace CinemaReservation.API.Tests.ControllerTests
 
                 dbContext.Reservations.Add(userReservation);
 
-                dbContext.ReservationSeats.Add(new Core.Enums.ReservationSeat { ReservationId = userReservation.Id, SeatId = seatId, Status = Core.Enums.Enums.ReservationStatus.Confirmed });
+                dbContext.ReservationSeats.Add(new Core.Enums.ReservationSeat
+                {
+                    ReservationId = userReservation.Id,
+                    SeatId = seatId,
+                    ShowtimeId = showtimeId,
+                    Status = Core.Enums.Enums.ReservationStatus.Confirmed
+                });
 
                 await dbContext.SaveChangesAsync();
             }
@@ -195,7 +201,7 @@ namespace CinemaReservation.API.Tests.ControllerTests
                 await dbContext.SaveChangesAsync();
             }
 
-            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Testschme");
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
 
             // Act
             var response = await Client.DeleteAsync($"/api/reservation/{reservationId}");
@@ -279,6 +285,62 @@ namespace CinemaReservation.API.Tests.ControllerTests
                     .Contain(rs => rs.SeatId == seatToKeepId && rs.Status == Enums.ReservationStatus.Confirmed);
 
                 updatReservation.TotalPrice.Should().Be(15.00m);
+            }
+        }
+
+        [Fact]
+        public async Task CancelSingleSeat_ShouldCancelReservation_WhenLastConfirmedSeatIsRemoved()
+        {
+            var testUserId = TestAuthHandler.TestUserId;
+            var reservationId = Guid.NewGuid();
+            var showtimeId = Guid.NewGuid();
+            var movieId = Guid.NewGuid();
+            var cancelledSeatId = Guid.NewGuid();
+            var lastSeatId = Guid.NewGuid();
+
+            using (var scope = Factory.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+                dbContext.Users.Add(new User { Id = testUserId, Username = "test" });
+                dbContext.Movies.Add(new Movie { Id = movieId, Title = "title", Description = "test", PosterUrl = "test", Genre = "test", DurationInMinutes = 10 });
+                dbContext.Showtimes.Add(new Showtime { Id = showtimeId, MovieId = movieId, StartTime = DateTime.UtcNow.AddDays(1) });
+                dbContext.Seats.Add(new Seat { Id = cancelledSeatId, SeatRow = "A", SeatNumber = 1 });
+                dbContext.Seats.Add(new Seat { Id = lastSeatId, SeatRow = "A", SeatNumber = 2 });
+
+                dbContext.Reservations.Add(new Reservation
+                {
+                    Id = reservationId,
+                    UserId = testUserId,
+                    ShowtimeId = showtimeId,
+                    Status = Enums.ReservationStatus.Confirmed,
+                    TotalPrice = 15.00m
+                });
+
+                dbContext.ReservationSeats.AddRange(
+                    new ReservationSeat { ID = Guid.NewGuid(), ReservationId = reservationId, SeatId = cancelledSeatId, ShowtimeId = showtimeId, Status = Enums.ReservationStatus.Cancelled, Price = 15.00m },
+                    new ReservationSeat { ID = Guid.NewGuid(), ReservationId = reservationId, SeatId = lastSeatId, ShowtimeId = showtimeId, Status = Enums.ReservationStatus.Confirmed, Price = 15.00m }
+                );
+
+                await dbContext.SaveChangesAsync();
+            }
+
+            Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TestScheme");
+
+            var response = await Client.DeleteAsync($"/api/reservation/{reservationId}/seats/{lastSeatId}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            using (var scope = Factory.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var reservation = await dbContext.Reservations
+                    .Include(r => r.ReservationSeats)
+                    .FirstOrDefaultAsync(r => r.Id == reservationId);
+
+                reservation.Should().NotBeNull();
+                reservation!.Status.Should().Be(Enums.ReservationStatus.Cancelled);
+                reservation.ReservationSeats.Should().OnlyContain(rs => rs.Status == Enums.ReservationStatus.Cancelled);
             }
         }
     }

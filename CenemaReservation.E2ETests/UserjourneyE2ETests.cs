@@ -73,7 +73,7 @@ namespace CenemaReservation.E2ETests
             // prepare the registration payload using our standard DTO
             var registerDto = new RegisterUserDto()
             {
-                Email = $"e2e_{uniqueSuffix}@.com",
+                Email = $"e2e_{uniqueSuffix}@example.com",
                 Username = $"user_{uniqueSuffix}",
                 Password = userPassword,                
             };
