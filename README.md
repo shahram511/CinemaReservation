@@ -49,6 +49,9 @@ Execute the following command in the root directory. Testcontainers will automat
 ```bash
 dotnet test
 
+---
 
-Reference
-This API was built to fulfill and expand upon the architectural requirements outlined in the roadmap.sh Movie Reservation System project.
+
+##  Project URL
+
+** https://roadmap.sh/projects/movie-reservation-system
